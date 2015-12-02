@@ -24,6 +24,8 @@ public:
     void printNodes();
     void printEdges();
     std::pair< std::pair<int,int>, double> findCircumCircle(node n1, node n2, node n3);
+    void delaunay(void);
+    bool circleTest(node p, std::pair<std::pair<double, double>, double> circumCircle);
 
 private:
     Ui::MainWindow *ui;

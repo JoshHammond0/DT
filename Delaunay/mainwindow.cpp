@@ -5,42 +5,29 @@
 #include <cstdlib>
 #include <ctime>
 
+#define SIZE 5
+
 MainWindow::MainWindow(QWidget *parent) :
     QMainWindow(parent),
     ui(new Ui::MainWindow)
 {
     ui->setupUi(this);
 
-    QGraphicsEllipseItem *tmpEllipse;
     mainWidget = new QWidget;
     mainLayout = new QVBoxLayout;
     inputPanel = new QHBoxLayout;
     scene = new QGraphicsScene;
     view = new QGraphicsView(scene);
     std::vector<node> nodes;
-    std::pair< std::pair<double,double>, double> circumCircle;
 
-    srand(time(NULL));  //  using the time seed from srand explanation
+    srand(time(NULL));
 
-    points.addNode("1", rand()%500, rand()%500);
-    points.addNode("2", rand()%500, rand()%500);
-    points.addNode("3", rand()%500, rand()%500);
+    for(int i = 0; i < SIZE; i++)
+    {
+        points.addNode(std::to_string(i), rand()%500, rand()%500);
+    }
 
-    nodes = points.getNodes();
-
-    points.addEdge(nodes[0].name,nodes[1].name);
-    points.addEdge(nodes[1].name,nodes[2].name);
-    points.addEdge(nodes[2].name,nodes[0].name);
-
-    circumCircle = findCircumCircle(nodes[0],nodes[1],nodes[2]);
-
-    tmpEllipse = new QGraphicsEllipseItem(circumCircle.first.first+10-circumCircle.second, circumCircle.first.second+10-circumCircle.second,
-                                          circumCircle.second*2, circumCircle.second*2);
-
-    tmpEllipse->setPen(QPen(Qt::green));
-    circumCircles.push_back(tmpEllipse);
-
-    scene->addItem(tmpEllipse);
+    delaunay();
 
     printNodes();
     printEdges();
@@ -176,3 +163,59 @@ std::pair< std::pair<int,int>, double> MainWindow::findCircumCircle(node n1, nod
 
     return retVal;
 }
+
+void MainWindow::delaunay(void)
+{
+    std::vector<node> nodes = points.getNodes();
+    QGraphicsEllipseItem *tmpEllipse;
+    int numNodes = nodes.size();
+    bool rejected;
+    std::pair< std::pair<double,double>, double> circumCircle;
+
+    for(int i = 0; i < numNodes-2; i++)
+    {
+        for(int j = i+1; j < numNodes-1; j++)
+        {
+            for(int k = j+1; k < numNodes; k++)
+            {
+                rejected = false;
+                for(int l = 0; l < numNodes; l++)
+                {
+                    circumCircle = findCircumCircle(nodes[i],nodes[j],nodes[k]);
+                    if(l!=i && l!=j && l!=k)
+                    {
+                       if(circleTest(nodes[l], circumCircle))
+                       {
+                            rejected = true;
+                       }
+                    }
+                }
+                if(!rejected)
+                {
+                    points.addEdge(nodes[i].name,nodes[j].name);
+                    points.addEdge(nodes[j].name,nodes[k].name);
+                    points.addEdge(nodes[k].name,nodes[i].name);
+
+                    tmpEllipse = new QGraphicsEllipseItem(circumCircle.first.first+10-circumCircle.second, circumCircle.first.second+10-circumCircle.second,
+                                                          circumCircle.second*2, circumCircle.second*2);
+
+                    QPen pen;
+                    pen.setColor("orange");
+                    pen.setWidth(4);
+                    tmpEllipse->setPen(pen);
+                    circumCircles.push_back(tmpEllipse);
+
+                    scene->addItem(tmpEllipse);
+                }
+            }
+        }
+    }
+}
+
+bool MainWindow::circleTest(node p, std::pair< std::pair<double,double>, double> circumCircle)
+{
+    double distance = sqrt(pow((circumCircle.first.first - p.x),2) + pow((circumCircle.first.second - p.y), 2));
+    if(distance > circumCircle.second) return false;
+    return true;
+}
+
